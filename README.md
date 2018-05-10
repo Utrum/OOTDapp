@@ -10,7 +10,7 @@ prototype. No warranty!
 
 ```
 curl https://install.meteor.com/ | sh
-git clone https://github.com/Utrum/ootdapp
+git clone https://github.com/Utrum/OOTDapp
 cd ootdapp
 meteor npm install
 ```
