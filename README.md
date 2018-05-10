@@ -15,7 +15,7 @@ cd ootdapp
 meteor npm install
 ```
 
-run the aotomicDEX GUI: (current version has only OSX/WIN version of the komodoplatformdaemon included)
+run the atomicDEX GUI: (current version has only OSX/WIN version of the komodoplatformdaemon included)
 ```
 meteor run
 ```
