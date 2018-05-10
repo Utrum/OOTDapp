@@ -1,6 +1,6 @@
-# BlocDapp v0.1
+# OOT Dapp v0.1
 
-SPV lightweight GUI and trading wallet for BNTN. This is experimental software and a functional
+SPV lightweight GUI and trading wallet for OOT. This is experimental software and a functional
 prototype. No warranty!
 
 
@@ -10,8 +10,8 @@ prototype. No warranty!
 
 ```
 curl https://install.meteor.com/ | sh
-git clone https://github.com/Blocnation/blocdapp
-cd blocdapp
+git clone https://github.com/utrum/ootdapp
+cd ootdapp
 meteor npm install
 ```
 
