@@ -11,7 +11,7 @@ prototype. No warranty!
 ```
 curl https://install.meteor.com/ | sh
 git clone https://github.com/Utrum/OOTDapp
-cd ootdapp
+cd OOTDapp
 meteor npm install
 ```
 
