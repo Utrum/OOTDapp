@@ -1,5 +1,3 @@
-//marketmaker and app methods
-
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { Userdata } from '../../api/userdata/userdata.js';
@@ -13,7 +11,8 @@ import { rootPath} from 'meteor/ostrio:meteor-root';
 import { HTTP } from 'meteor/http';
 import { Random } from 'meteor/random';
 import pm2 from 'pm2';
-import os from 'os'
+import os from 'os';
+import fs from 'fs';
 import path from 'path';
 
 const numcoin = 100000000;
@@ -27,24 +26,24 @@ Meteor.methods({
 
         if (Tradedata.find().count() < 1) {
             Tradedata.insert({
-                key: "bntnpriceKMD",
+                key: "ootpriceKMD",
                 price: Number(0) * numcoin,
                 createdAt: new Date()
             });
             Tradedata.insert({
-                key: "bntnpriceQTUM",
+                key: "ootpriceLTC",
                 price: Number(0) * numcoin,
                 createdAt: new Date()
             });
             Tradedata.insert({
-                key: "bntnpriceBTC",
+                key: "ootpriceBTC",
                 price: Number(0) * numcoin,
                 createdAt: new Date()
             });
         }
         if (Userdata.find().count() === 0) {
             const data = [{
-                    coin: "QTUM",
+                    coin: "LTC",
                     balance: Number(0) * numcoin,
                     smartaddress: "addr",
                     createdAt: new Date()
@@ -56,7 +55,7 @@ Meteor.methods({
                     createdAt: new Date()
                 },
                 {
-                    coin: "BNTN",
+                    coin: "OOT",
                     balance: Number(0) * numcoin,
                     smartaddress: "addr",
                     createdAt: new Date()
@@ -73,6 +72,7 @@ Meteor.methods({
         }
 
         if (os.platform() === 'darwin') {
+            //fixPath();
             marketmakerBin = Meteor.rootPath + '/../../../../../private/static/OSX/marketmaker';
             marketmakerDir = `${process.env.HOME}/Library/Application Support/marketmaker`;
         } else if (os.platform() === 'linux') {
@@ -81,15 +81,20 @@ Meteor.methods({
         } else if (os.platform() === 'win32') {
             marketmakerBin = Meteor.rootPath + '/../../../../../private/static/WIN/marketmaker.exe';
             marketmakerBin = path.normalize(marketmakerBin);
+            marketmakerDir = `${process.env.HOME}\\marketmaker`;
         } else {
             return false;
+        }
+
+        if (!fs.existsSync(marketmakerDir)) {
+            fs.mkdirSync(marketmakerDir);
         }
 
         var coinFile = 'static/config/coins.json';
         coindata = JSON.parse(Assets.getText(coinFile));
         console.log("starting MM...")
         const startparams = {
-            'gui': 'dICO',
+            'gui': 'OOTdApp',
             'client': 1,
             'canbind': 0,
             'userhome': `${process.env.HOME}`,
@@ -99,15 +104,10 @@ Meteor.methods({
 
         let params = JSON.stringify(startparams);
         let home = process.env.HOME;
-        params = `'${params}'`
 
-        // if (os.platform() !== 'win32') {
-        //     params = `'${params}'`;
-        // } else {
-        //     params = `'${params}'`;
-        // }
+        params = `'${params}'`;
 
-        pm2.connect(false, function(err) {
+        pm2.connect(true, function(err) {
             if (err) {
                 console.error(err);
                 process.exit(2);
@@ -119,7 +119,7 @@ Meteor.methods({
             pm2.start({
                 script: marketmakerBin,
                 exec_mode: 'fork',
-                cwd: home,
+                cwd: marketmakerDir,
                 args: params,
             }, function(err, apps) {
                 pm2.disconnect();
@@ -131,19 +131,17 @@ Meteor.methods({
         } catch (e) {
             throw new Meteor.Error(JSON.parse(e));
         }
-        //console.log(passphrase);
-
         const setparams = {
             'userpass': '1d8b27b21efabcd96571cd56f91a40fb9aa4cc623d273c63bf9223dc6f8cd81f',
             'userhome': `${process.env.HOME}`,
             'method': 'passphrase',
             'passphrase': passphrase,
-            'gui': 'dICOApp',
-            'netid': 3337,
-            'seednode': '46.4.61.190'
+            'gui': 'OOTdApp',
+            // 'netid': this.config.diconetid,
+            // 'seednode': this.config.dicoseed
         };
-        //console.log("using passphrase: " + passphrase);
-        Meteor.sleep(2000);
+
+        Meteor.sleep(3000);
         try {
             console.log("ISSUING login call");
             const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
@@ -152,12 +150,12 @@ Meteor.methods({
 
             console.log("login result: " + result);
             var userpass = JSON.parse(result.content).userpass;
-            //console.log("userpass: " + userpass);
+            console.log("userpass: " + userpass);
 
 
             try {
-                //console.log("set pass");
-                //console.log(JSON.parse(result.content));
+                console.log("set pass");
+                console.log(JSON.parse(result.content));
 
                 Userdata.insert({
                     key: "userpass",
@@ -222,24 +220,44 @@ Meteor.methods({
             'port': electrumServers.KMD.port
         };
 
-        const paramsBNTN = {
+        // const paramsZEC = {
+        //     'userpass': Userdata.findOne({
+        //         key: "userpass"
+        //     }).userpass.toString(),
+        //     'method': 'electrum',
+        //     'coin': 'ZEC',
+        //     'ipaddr': 'electrum2.cipig.net',
+        //     'port': 10058
+        // };
+        //
+        // const paramsZEC2 = {
+        //     'userpass': Userdata.findOne({
+        //         key: "userpass"
+        //     }).userpass.toString(),
+        //     'method': 'electrum',
+        //     'coin': 'ZEC',
+        //     'ipaddr': 'electrum1.cipig.net',
+        //     'port': 10058
+        // };
+
+        const paramsOOT = {
             'userpass': Userdata.findOne({
                 key: "userpass"
             }).userpass.toString(),
             'method': 'electrum',
-            'coin': 'BNTN',
-            'ipaddr': '46.4.78.11',
-            'port': 10026
+            'coin': 'OOT',
+            'ipaddr': 'electrum1.utrum.io',
+            'port': 10088
         };
 
-        const paramsBNTN2 = {
+        const paramsOOT2 = {
             'userpass': Userdata.findOne({
                 key: "userpass"
             }).userpass.toString(),
             'method': 'electrum',
-            'coin': 'BNTN',
-            'ipaddr': electrumServers.BNTN.address,
-            'port': electrumServers.BNTN.port
+            'coin': 'OOT',
+            'ipaddr': 'electrum2.utrum.io',
+            'port': 10088
         };
 
         const paramsBTC = {
@@ -262,25 +280,26 @@ Meteor.methods({
             'port': electrumServers.BTC.port
         };
 
-        const paramsQTUM = {
+        const paramsLTC = {
             'userpass': Userdata.findOne({
                 key: "userpass"
             }).userpass.toString(),
             'method': 'electrum',
-            'coin': 'QTUM',
-            'ipaddr': 's4.qtum.info',
-            'port': 50001
+            'coin': 'LTC',
+            'ipaddr': 'electrum1.cipig.net',
+            'port': 10065
         };
 
-        const paramsQTUM2 = {
+        const paramsLTC2 = {
             'userpass': Userdata.findOne({
                 key: "userpass"
             }).userpass.toString(),
             'method': 'electrum',
-            'coin': 'QTUM',
-            'ipaddr': 's2.qtum.info',
-            'port': 50001
+            'coin': 'LTC',
+            'ipaddr': 'electrum2.cipig.net',
+            'port': 10065
         };
+
         try {
             const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
                 data: paramsKMD
@@ -290,7 +309,19 @@ Meteor.methods({
         } catch (e) {
             throw new Meteor.Error(e);
         }
-        Meteor.sleep(1000);
+
+        Meteor.sleep(500);
+
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsKMD2
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+
+        Meteor.sleep(500);
 
         try {
             const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
@@ -300,62 +331,68 @@ Meteor.methods({
         } catch (e) {
             throw new Meteor.Error(e);
         }
+
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsBTC2
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+
+        Meteor.sleep(500);
+
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsLTC2
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsLTC
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+
+        Meteor.sleep(500);
+
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsOOT
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+
+        Meteor.sleep(500);
+
+        try {
+            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
+                data: paramsOOT2
+            });
+            console.log(result);
+        } catch (e) {
+            throw new Meteor.Error(e);
+        }
+
         Meteor.sleep(1500);
-
-        try {
-            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
-                data: paramsQTUM
-            });
-            console.log(result);
-        } catch (e) {
-            throw new Meteor.Error(e);
-        }
-        Meteor.sleep(1500);
-
-        try {
-            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
-                data: paramsBNTN
-            });
-            console.log(result);
-        } catch (e) {
-            throw new Meteor.Error(e);
-        }
-        Meteor.sleep(1000);
-
-        try {
-            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
-                data: paramsBNTN2
-            });
-            console.log(result);
-        } catch (e) {
-            throw new Meteor.Error(e);
-        }
-        Meteor.sleep(1000);
-
-        try {
-            const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
-                data: paramsQTUM2
-            });
-            console.log(result);
-        } catch (e) {
-            throw new Meteor.Error(e);
-        }
-
-        Meteor.sleep(2000);
 
         if (Userdata.find().count() > 4) {
             Meteor.call('getbalance', 'KMD');
-            Meteor.call('getbalance', 'BNTN');
+            Meteor.call('getbalance', 'OOT');
             Meteor.call('getbalance', 'BTC');
-            Meteor.call('getbalance', 'QTUM');
-            Meteor.call('getprice', 'KMD');
-            Meteor.call('getprice', 'BTC');
-            Meteor.call('getprice', 'QTUM');
+            Meteor.call('getbalance', 'LTC');
         }
         console.log("connected");
     },
     sendtoaddress(coin, address, amount) {
-        console.log("payout: " + amount + coin + " to " + address);
         var outputs = '[{' + address + ':' + Number(amount) / numcoin + '}]';
         console.log(outputs);
         outputs = JSON.stringify(eval("(" + outputs + ")"));
@@ -407,25 +444,32 @@ Meteor.methods({
                     key: "userpass"
                 }).userpass,
                 'method': 'orderbook',
-                'base': "BNTN",
+                'base': "OOT",
                 'rel': paycoin
             }
             var bestprice = 0;
-            const buf = 1.08 * numcoin;
+            const buf = 1.07 * numcoin;
             var price = 0;
             try {
                 const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
                     data: getprices
                 });
+                console.log("RESULT: " + result.content)
                 try {
                     if (JSON.parse(result.content).asks.length > 0) {
                         var i = 0;
-                        while (JSON.parse(result.content).asks[i].maxvolume == 0 && i < JSON.parse(result.content).asks.length - 1) {
+
+                        while (i < JSON.parse(result.content).asks.length && JSON.parse(result.content).asks[i].maxvolume === 0) {
                             i++;
                         }
+
+                        console.log(JSON.parse(result.content).asks[i].maxvolume);
+
                         if (JSON.parse(result.content).asks[i].maxvolume > 0) {
+                            console.log("bestprice set");
                             bestprice = Number((JSON.parse(result.content).asks[i].price * 100000000).toFixed(0));
                         }
+                        console.log("best price: " + bestprice);
                     }
                 } catch (e) {
                     console.log(e);
@@ -436,7 +480,7 @@ Meteor.methods({
             try {
                 if (bestprice > 0) {
                     Tradedata.update({
-                        key: "bntnprice" + paycoin
+                        key: "ootprice" + paycoin
                     }, {
                         $set: {
                             price: Number(((buf / numcoin * bestprice / numcoin).toFixed(8) * 100000000).toFixed(0))
@@ -444,7 +488,7 @@ Meteor.methods({
                     });
                 } else {
                     Tradedata.update({
-                        key: "bntnprice" + paycoin
+                        key: "ootprice" + paycoin
                     }, {
                         $set: {
                             price: 0
@@ -460,13 +504,14 @@ Meteor.methods({
     },
     buy(amount, paycoin) {
         var unspent = Meteor.call("listunspent", paycoin);
+
         if (Number(unspent.length) < 2) {
             const getprices = {
                 'userpass': Userdata.findOne({
                     key: "userpass"
                 }).userpass,
                 'method': 'orderbook',
-                'base': "BNTN",
+                'base': "OOT",
                 'rel': paycoin
             }
             var bestprice = 0;
@@ -475,28 +520,27 @@ Meteor.methods({
                     data: getprices,
                     timeout: 90000
                 });
+                console.log(JSON.parse(result.content));
                 console.log(JSON.parse(result.content).asks.length);
                 try {
                     if (JSON.parse(result.content).asks.length > 0) {
                         var i = 0;
-                        while (JSON.parse(result.content).asks[i].maxvolume == 0 && i < JSON.parse(result.content).asks.length) {
+                        while (i < JSON.parse(result.content).asks.length && JSON.parse(result.content).asks[i].maxvolume === 0) {
                             i++;
                         }
                         if (JSON.parse(result.content).asks[i].maxvolume > 0) {
+                            console.log("bestprice set");
                             bestprice = Number((JSON.parse(result.content).asks[i].price * 100000000).toFixed(0));
-                        } else if (JSON.parse(result.content).asks[i].maxvolume == 0) {
-                            bestprice = 0;
                         }
                         console.log("best price: " + bestprice);
                     }
                 } catch (e) {
                     console.log(e);
-                    throw new Meteor.Error(e);
                 }
             } catch (e) {
                 throw new Meteor.Error(e);
             }
-            var buf = 1.08 * numcoin;
+            var buf = 1.07 * numcoin;
             var bufprice = Number(((buf / numcoin * bestprice / numcoin).toFixed(8) * numcoin).toFixed(0));
             var relvolume = Number(amount / numcoin * bestprice / numcoin);
             var buyparams = null;
@@ -508,7 +552,7 @@ Meteor.methods({
                         key: "userpass"
                     }).userpass,
                     'method': 'buy',
-                    'base': "BNTN",
+                    'base': "OOT",
                     'rel': paycoin,
                     'relvolume': relvolume.toFixed(3),
                     'price': Number(bufprice / numcoin).toFixed(3)
@@ -521,21 +565,19 @@ Meteor.methods({
                     data: buyparams,
                     timeout: 90000
                 });
-                console.log("You are spending: " + relvolume.toFixed(3) + " KMD for " + Number(bufprice / numcoin).toFixed(3) + "KMD each and resulting in " + relvolume.toFixed(3) / Number(bufprice / numcoin).toFixed(3) + "BNTN");
-                console.log("buy call response1: " + JSON.parse(result));
-                console.log("UTXO autosplit TX INFO: " + result.content);
             } catch (e) {
                 throw new Meteor.Error(e);
             }
 
             return "funds in preparation";
         }
+        // else{
         const getprices = {
             'userpass': Userdata.findOne({
                 key: "userpass"
             }).userpass,
             'method': 'orderbook',
-            'base': "BNTN",
+            'base': "OOT",
             'rel': paycoin
         }
         var bestprice = 0;
@@ -549,18 +591,17 @@ Meteor.methods({
             try {
                 if (JSON.parse(result.content).asks.length > 0) {
                     var i = 0;
-                    while (i < JSON.parse(result.content).asks.length && JSON.parse(result.content).asks[i].maxvolume == 0) {
+                    while (i < JSON.parse(result.content).asks.length && JSON.parse(result.content).asks[i].maxvolume === 0) {
                         i++;
                     }
-                    console.log("maxvol: " + JSON.parse(result.content).asks[i].maxvolume);
                     if (JSON.parse(result.content).asks[i].maxvolume > 0) {
+                        console.log("bestprice set");
                         bestprice = Number((JSON.parse(result.content).asks[i].price * 100000000).toFixed(0));
                     }
                     console.log("best price: " + bestprice);
                 }
             } catch (e) {
-                console.log("err. " + e);
-                throw new Meteor.Error(e);
+                console.log(e);
             }
         } catch (e) {
             console.log("err2. " + e);
@@ -571,7 +612,7 @@ Meteor.methods({
         var relvolume = Number(amount / numcoin * bestprice / numcoin);
         console.log("amount: " + amount / numcoin);
         console.log("bestprice: " + bestprice / numcoin);
-        console.log("relvolume: " + relvolume)
+        console.log("relvolume: " + relvolume);
         var buyparams = null;
         if (relvolume * numcoin + txfee < Number(Userdata.findOne({
                 coin: paycoin
@@ -581,7 +622,7 @@ Meteor.methods({
                     key: "userpass"
                 }).userpass,
                 'method': 'buy',
-                'base': "BNTN",
+                'base': "OOT",
                 'rel': paycoin,
                 'relvolume': relvolume.toFixed(3),
                 'price': Number(bufprice / numcoin).toFixed(3)
@@ -597,7 +638,7 @@ Meteor.methods({
                     data: buyparams,
                     timeout: 90000
                 });
-                console.log("You are spending: " + relvolume.toFixed(3) + " KMD for " + Number(bufprice / numcoin).toFixed(3) + "KMD each and resulting in " + relvolume.toFixed(3) / Number(bufprice / numcoin).toFixed(3) + "BNTN");
+                console.log("You are spending: " + relvolume.toFixed(3) + " KMD for " + Number(bufprice / numcoin).toFixed(3) + "KMD/OOT and resulting in " + relvolume.toFixed(3) / Number(bufprice / numcoin).toFixed(3) + "OOT");
                 if (result.content.substr(2, 5) === "error") {
                     throw new Meteor.Error(result.content);
                 }
@@ -644,7 +685,7 @@ Meteor.methods({
                     throw new Meteor.Error(e);
                 }
 
-                return "Swap initiated - please wait min. 3 minutes before buying again3!";
+                return "Swap initiated - please wait min. 3 minutes before buying again!";
 
             } catch (e) {
                 console.log(e);
@@ -655,6 +696,8 @@ Meteor.methods({
         } else {
             throw new Meteor.Error("Already swap ongoing - please wait until finished.");
         }
+
+        // }
     },
     getbalance(coin) {
         const balanceparams = {
@@ -689,7 +732,7 @@ Meteor.methods({
         }
     },
     listtransactions(coin) {
-        if (Userdata.find().count() > 1) {
+        if (Userdata.find().count() > 6) {
             const listparams = {
                 'userpass': Userdata.findOne({
                     key: "userpass"
@@ -701,10 +744,12 @@ Meteor.methods({
                 }).smartaddress.toString(),
                 'count': 10
             };
+
             try {
                 const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
                     data: listparams
                 });
+
                 JSON.parse(result.content).forEach(function(tx) {
                     var transaction = tx;
 
@@ -835,19 +880,19 @@ Meteor.methods({
                         key: "userpass"
                     }).userpass,
                     'method': 'recentswaps'
-                }
+                };
                 try {
                     const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
                         data: swaplist
                     });
                     console.log("checkswapstatus: " + result.content);
                     var swaps = JSON.parse(result.content).swaps;
-                    if (Tradedata.findOne({
-                            key: "tempswap"
-                        })) {
-                        if (Tradedata.findOne({
-                                key: "tempswap"
-                            }).expiration * 1000 < Date.now()) {
+                    const tempSwap = Tradedata.findOne({
+                        key: "tempswap"
+                    });
+                    console.log('tempswap', tempSwap);
+                    if (tempSwap) {
+                        if (tempSwap.expiration * 1000 < Date.now()) {
                             Tradedata.remove({
                                 key: "tempswap"
                             });
@@ -856,7 +901,6 @@ Meteor.methods({
                     var tswaps = Swapdata.find({
                         swaplist: false
                     });
-                    console.log('TSWAPS', tswaps.fetch());
                     tswaps.forEach((swapelem) => {
                         if (swapelem.expiration * 1000 + 900000 < Date.now()) {
                             try {
@@ -897,7 +941,7 @@ Meteor.methods({
                         'method': 'swapstatus',
                         'requestid': requestid,
                         'quoteid': quoteid
-                    }
+                    };
                     try {
                         const result = HTTP.call('POST', 'http://127.0.0.1:7783', {
                             data: swapelem
@@ -948,6 +992,7 @@ Meteor.methods({
                                         $set: {
                                             requestid: swap.requestid,
                                             quoteid: swap.quoteid,
+                                            //value: swap.values[0],
                                             status: "pending",
                                             finished: false,
                                             step: step,
